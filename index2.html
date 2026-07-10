@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Half-Life 2 · Эпоха Freeman</title>
+  <!-- Шрифты: индустриальный гротеск + моноширинный для цитат -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Oswald', 'Segoe UI', system-ui, sans-serif;
+      background: #0c0b0a;
+      color: #e0d7c6;
+      line-height: 1.5;
+      overflow-x: hidden;
+      background-image: radial-gradient(circle at 20% 30%, #2a3f2e 0%, #0e0c0b 90%);
+    }
+
+    /* ---- анимированная дымка и помехи ---- */
+    .atmosphere {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 2px, transparent 2px, transparent 6px);
+      opacity: 0.25;
+      animation: scanlines 8s linear infinite;
+    }
+
+    .dust-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.08"/></svg>');
+      pointer-events: none;
+      z-index: 0;
+      animation: grain 0.5s steps(2) infinite;
+    }
+
+    @keyframes scanlines {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(4px); }
+    }
+
+    @keyframes grain {
+      0%, 100% { opacity: 0.08; }
+      50% { opacity: 0.12; }
+    }
+
+    /* ===== ДОЖДЬ ===== */
+    .rain-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .raindrop {
+      position: absolute;
+      top: -40px;
+      width: 2px;
+      background: linear-gradient(to bottom, rgba(180, 200, 210, 0.1), rgba(140, 160, 180, 0.35));
+      border-radius: 1px;
+      animation: rainFall linear infinite;
+      box-shadow: 0 0 4px rgba(160, 180, 200, 0.2);
+    }
+
+    @keyframes rainFall {
+      0% {
+        transform: translateY(-40px) translateX(0);
+        opacity: 0.6;
+      }
+      20% {
+        opacity: 0.8;
+      }
+      80% {
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateY(105vh) translateX(-25px);
+        opacity: 0;
+      }
+    }
+
+    /* ===== ТУМАН ВНИЗУ ===== */
+    .fog-bottom {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 280px;
+      pointer-events: none;
+      z-index: 0;
+      background: linear-gradient(to top, 
+        rgba(140, 155, 120, 0.25) 0%, 
+        rgba(120, 140, 100, 0.2) 15%,
+        rgba(100, 120, 80, 0.12) 35%,
+        rgba(80, 90, 60, 0.05) 60%,
+        transparent 100%);
+      animation: fogDrift 14s ease-in-out infinite;
+    }
+
+    .fog-bottom::before {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: -10%;
+      width: 120%;
+      height: 250px;
+      background: radial-gradient(ellipse at 30% 100%, 
+        rgba(180, 190, 150, 0.22) 0%, 
+        rgba(140, 150, 110, 0.13) 30%, 
+        transparent 70%);
+      animation: fogExpand 12s ease-in-out infinite alternate;
+    }
+
+    .fog-bottom::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 200px;
+      background: radial-gradient(ellipse at 70% 90%, 
+        rgba(160, 170, 130, 0.18) 0%, 
+        rgba(110, 120, 85, 0.1) 40%, 
+        transparent 70%);
+      animation: fogDriftReverse 16s ease-in-out infinite;
+    }
+
+    @keyframes fogDrift {
+      0% { 
+        opacity: 0.7;
+        transform: translateX(-15px);
+      }
+      25% {
+        opacity: 0.9;
+        transform: translateX(5px);
+      }
+      50% { 
+        opacity: 0.75;
+        transform: translateX(15px);
+      }
+      75% {
+        opacity: 0.85;
+        transform: translateX(-5px);
+      }
+      100% { 
+        opacity: 0.7;
+        transform: translateX(-15px);
+      }
+    }
+
+    @keyframes fogDriftReverse {
+      0% { 
+        opacity: 0.6;
+        transform: translateX(10px);
+      }
+      50% { 
+        opacity: 0.85;
+        transform: translateX(-12px);
+      }
+      100% { 
+        opacity: 0.6;
+        transform: translateX(10px);
+      }
+    }
+
+    @keyframes fogExpand {
+      0% {
+        opacity: 0.5;
+        transform: scaleX(1) scaleY(1);
+      }
+      100% {
+        opacity: 0.8;
+        transform: scaleX(1.15) scaleY(1.1);
+      }
+    }
+
+    /* дополнительный слой тумана для глубины */
+    .fog-extra {
+      position: fixed;
+      bottom: -30px;
+      left: -5%;
+      width: 110%;
+      height: 200px;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(ellipse at 50% 100%, 
+        rgba(160, 175, 140, 0.15) 0%, 
+        rgba(130, 145, 105, 0.08) 45%, 
+        transparent 75%);
+      animation: fogPulse 10s ease-in-out infinite;
+    }
+
+    @keyframes fogPulse {
+      0%, 100% {
+        opacity: 0.5;
+        transform: translateY(0);
+      }
+      50% {
+        opacity: 0.8;
+        transform: translateY(-10px);
+      }
+    }
+
+    /* основной контейнер поверх эффектов */
+    .wrapper {
+      position: relative;
+      z-index: 2;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+      backdrop-filter: blur(2px);
+      background: rgba(8, 8, 8, 0.5);
+      min-height: 100vh;
+    }
+
+    /* --- типографика в стиле ГО и Альянса --- */
+    h1, h2, h3 {
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #f5a338;
+      text-shadow: 0 0 10px #b85e0c80, 2px 2px 0 #1a1a1a;
+      border-bottom: 2px solid #4f6d5c;
+      padding-bottom: 0.4rem;
+      margin-top: 2.2rem;
+      margin-bottom: 1.2rem;
+    }
+
+    h1 {
+      font-size: 3.2rem;
+      text-align: center;
+      border-bottom: none;
+      color: #e68a2e;
+      filter: drop-shadow(0 0 18px #c94f1f);
+      margin-bottom: 0.2rem;
+      letter-spacing: 5px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-family: 'Source Code Pro', monospace;
+      color: #9cae9c;
+      font-size: 1rem;
+      border-top: 1px dashed #5e6b5a;
+      padding-top: 0.8rem;
+      margin-bottom: 2.5rem;
+      letter-spacing: 1px;
+    }
+
+    p, li {
+      font-family: 'Segoe UI', 'Oswald', sans-serif;
+      font-weight: 300;
+      font-size: 1.15rem;
+      margin-bottom: 1.2rem;
+      color: #d1cdc2;
+      letter-spacing: 0.4px;
+    }
+
+    .lambda-symbol {
+      color: #e05a2c;
+      font-weight: 600;
+      font-size: 1.8rem;
+      vertical-align: middle;
+      display: inline-block;
+      transform: rotate(-5deg);
+      margin: 0 5px;
+      text-shadow: 0 0 15px #ff5e00;
+    }
+
+    /* скриншоты сетка */
+    .screenshots {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin: 2rem 0;
+    }
+
+    .screen-card {
+      background: #1d2a1b;
+      border: 1px solid #4a5b41;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.7), 0 0 20px #1f2e14;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .screen-card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 20px 30px rgba(0,0,0,0.8), 0 0 35px #d45d1c;
+    }
+
+    .screen-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      filter: sepia(0.3) contrast(1.2) brightness(0.9);
+      transition: filter 0.3s;
+    }
+
+    .screen-card:hover img {
+      filter: sepia(0.1) contrast(1.1) brightness(1);
+    }
+
+    .screen-caption {
+      padding: 0.7rem;
+      font-size: 0.9rem;
+      background: #121a0f;
+      color: #bbaa87;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* видео-контейнер трейлера */
+    .trailer-section {
+      margin: 2.5rem 0;
+      background: #0f130c;
+      border: 2px solid #586f4b;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: inset 0 0 30px #0a0f06, 0 0 40px #2d401d;
+    }
+
+    .video-wrapper {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .video-wrapper iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .quote {
+      font-family: 'Source Code Pro', monospace;
+      background: #1a1f13;
+      padding: 1.2rem 1.8rem;
+      border-left: 8px solid #e65c1e;
+      margin: 2rem 0;
+      color: #ced5b7;
+      font-style: italic;
+      box-shadow: 0 4px 15px black;
+    }
+
+    .divider {
+      border: 0;
+      height: 2px;
+      background: linear-gradient(to right, #3c512b, #f0842c, #3c512b);
+      margin: 2.5rem 0;
+    }
+
+    .button-hint {
+      display: inline-block;
+      background: #2c3317;
+      color: #f7b05e;
+      padding: 0.3rem 1.2rem;
+      border: 1px solid #b85e1a;
+      border-radius: 3px;
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      margin-top: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3.5rem;
+      color: #7e8c6f;
+      font-size: 0.9rem;
+      border-top: 1px solid #4d5538;
+      padding-top: 1.8rem;
+    }
+
+    a {
+      color: #f7a63a;
+      text-decoration: none;
+      border-bottom: 1px dotted #f0842c;
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2.3rem;
+      }
+      .screenshots {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+<!-- Фоновые слои: помехи, дымка -->
+<div class="atmosphere"></div>
+<div class="dust-overlay"></div>
+
+<!-- ДОЖДЬ (CSS-капли) -->
+<div class="rain-container" id="rainContainer"></div>
+
+<!-- ТУМАН ВНИЗУ -->
+<div class="fog-bottom"></div>
+<div class="fog-extra"></div>
+
+<div class="wrapper">
+  <header>
+    <h1>
+      <span class="lambda-symbol">λ</span> HALF-LIFE 2 <span class="lambda-symbol">λ</span>
+    </h1>
+    <div class="subtitle">«Проснись, мистер Фримен. Проснись и пойми…»</div>
+  </header>
+
+  <!-- ОБ ИГРЕ подробный текст -->
+  <section>
+    <h2>▸ Город 17 и восстание</h2>
+    <p>
+      Half-Life 2 — не просто шутер от первого лица. Это мрачная антиутопия, вышедшая в ноябре 2004 года и навсегда изменившая индустрию. 
+      Разработанная компанией <strong>Valve Corporation</strong>, игра продолжила историю физика Гордона Фримена, которого G-Man вытаскивает из стазиса спустя годы после инцидента в Чёрной Мезе. 
+      Земля порабощена многомерной империей <strong>Альянса (Combine)</strong>. Люди загнаны в города-тюрьмы, подавлены системой подавления и пропагандой доктора Брина.
+    </p>
+    <p>
+      Игрок снова надевает легендарный костюм H.E.V. и присоединяется к сопротивлению. Вместе с Аликс Вэнс, её отцом Илаем, верным псом Догом и другими повстанцами Фримен проходит путь от побега из Сити 17 до уничтожения Цитадели.
+      Инновационный физический движок <strong>Source</strong> подарил миру грави-пушку — инструмент, позволяющий манипулировать объектами, решать головоломки и метать в лицо врагам радиаторы или циркулярные пилы.
+    </p>
+    <div class="quote">
+      «Добро пожаловать в Сити 17. Вы избрали или были избраны… приятного вам пребывания.» — голос из динамиков Альянса.
+    </div>
+  </section>
+
+  <!-- ТРЕЙЛЕР (RuTube) -->
+  <section class="trailer-section">
+    <h2 style="margin-top: 0; border-bottom-color: #e08537;">▶ Официальный трейлер</h2>
+    <div class="video-wrapper">
+      <!-- Встроенное видео с RuTube -->
+      <iframe src="https://rutube.ru/play/embed/e937e734224a30152089d43c3d00f153/" 
+              title="Half-Life 2 Trailer" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen>
+      </iframe>
+    </div>
+    <p style="margin-top: 0.8rem; font-size: 0.95rem; color: #aba78b;">
+      * Видео загружено с RuTube. Наслаждайтесь легендарным трейлером Half-Life 2.
+    </p>
+  </section>
+
+  <!-- СКРИНШОТЫ через внешние ссылки -->
+  <section>
+    <h2>▸ Кадры из игры</h2>
+    <div class="screenshots">
+      <div class="screen-card">
+        <img src="https://upload.wikimedia.org/wikipedia/en/3/3e/Half-Life_2_cover.jpg" alt="Обложка Half-Life 2" loading="lazy">
+        <div class="screen-caption">Гордон Фримен · лицевая обложка</div>
+      </div>
+      <div class="screen-card">
+        <img src="https://cdn.mos.cms.futurecdn.net/d2a5f1d12c4a0e2d6b8c4f4a5c6b7d8e.jpg" alt="Сити 17" loading="lazy">
+        <div class="screen-caption">Цитадель над Сити 17</div>
+      </div>
+      <div class="screen-card">
+        <img src="https://upload.wikimedia.org/wikipedia/en/4/4e/Half-Life_2_Ravenholm.jpg" alt="Рейвенхолм" loading="lazy">
+        <div class="screen-caption">Рейвенхолм · «Мы не ходим в Рейвенхолм»</div>
+      </div>
+      <div class="screen-card">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvOKX63pNcaE1eX97AvL1rjZxmK261jID5FUi2T-rPc9Afxsxvjpraars&s=10" alt="Хедкраб и зомби" loading="lazy">
+        <div class="screen-caption">Хедкраб · угроза из Рейвенхолма</div>
+      </div>
+      <div class="screen-card">
+        <img src="https://gamingpastime.com/wp-content/uploads/2023/04/halflife2_3.jpg" alt="Геймплей Half-Life 2" loading="lazy">
+        <div class="screen-caption">Побережье · патруль Альянса</div>
+      </div>
+      <div class="screen-card">
+        <img src="https://img.championat.com/c/1200x900/news/big/d/l/demoversiya-half-life-2-s-trassirovkoj-luchej-vyshla-v-steam_1742307063717559315.jpg" alt="Трассировка лучей HL2" loading="lazy">
+        <div class="screen-caption">Обновлённая графика · RTX</div>
+      </div>
+      <div class="screen-card">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBSN5BsUWPChpX29-DJnHKoyrzPh1BYh-2H_u9U2GPTT3yVn4s2TO-LZ1n&s=10" alt="Враг из HL2" loading="lazy">
+        <div class="screen-caption">Комбайн · солдат Альянса</div>
+      </div>
+      <div class="screen-card">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTM_k5w2Xjt5RNxYLXRdppWfie5r8q0m4Ig1JeJSn2P1NxTiyALAFvu1lIs&s=10" alt="Аликс Вэнс" loading="lazy">
+        <div class="screen-caption">Аликс Вэнс · верный друг</div>
+      </div>
+    </div>
+    <p style="font-size: 0.9rem; color: #b9b08b;">
+      * Скриншоты через внешние URL (изображения из открытых источников, Википедия/игровые ресурсы). 
+    </p>
+  </section>
+
+  <!-- РАЗРАБОТЧИКИ -->
+  <section>
+    <h2>▸ Создатели: Valve</h2>
+    <p>
+      <strong>Valve Corporation</strong> (Белвью, штат Вашингтон) под руководством Гейба Ньюэлла (Gabe Newell) превратила Half-Life 2 в технологический прорыв. 
+      Разработка длилась более пяти лет; в 2003 году исходный код был украден хакером, что привело к задержке релиза. Но команда сплотилась и выпустила игру 16 ноября 2004 года.
+      Ключевые фигуры: сценарист Марк Лэйдлоу, художник Виктор Антонов (создатель облика Сити 17), программист Джей Стелли и многие другие. Движок Source стал фундаментом для десятков культовых модификаций и сиквелов.
+    </p>
+    <p>
+      Valve известна своим особым подходом: плоская структура, минимум менеджмента, ставка на талант. Именно это породило шедевр, получивший более 40 наград «Игра года».
+    </p>
+  </section>
+
+  <!-- ПЛАНЫ О ПРОДОЛЖЕНИИ -->
+  <section>
+    <h2>▸ Эпизоды и мечты о Half-Life 3</h2>
+    <p>
+      После успеха HL2 Valve выпустила эпизодическое продолжение: <strong>Episode One</strong> (2006) и <strong>Episode Two</strong> (2007), закончившиеся душераздирающим клиффхэнгером. 
+      Фанаты годами ждали Half-Life 2: Episode Three или полноценную Half-Life 3. Разработка неоднократно подтверждалась утечками, концепт-артами, но проект замораживался. 
+      В 2020 году вышел <strong>Half-Life: Alyx</strong> — VR-приквел между HL1 и HL2, который изменил концовку Episode Two и возродил надежду. 
+      Гейб Ньюэлл в интервью намекнул, что «Half-Life 3» возможна, когда технологии позволят сделать нечто действительно революционное. Сообщество продолжает ждать.
+    </p>
+    <p style="background: #1e2918; padding: 0.8rem; border-radius: 6px;">
+      <span class="lambda-symbol" style="font-size: 1.4rem;">λ</span> Текущий статус: официально Valve не анонсировала Half-Life 3, но Half-Life: Alyx доказала, что вселенная жива.
+    </p>
+  </section>
+
+  <!-- ОТЗЫВЫ -->
+  <section>
+    <h2>▸ Отзывы критиков и игроков</h2>
+    <div class="quote">
+      «Half-Life 2 — это триумф повествования в видеоиграх. Каждая локация дышит историей, а физический геймплей до сих пор ощущается свежо.» — <strong>PC Gamer (96/100)</strong>
+    </div>
+    <div class="quote">
+      «Мастер-класс по дизайну уровней и погружению. Рейвенхолм пугает, а Цитадель поражает воображение. Это не просто игра, это культурный феномен.» — <strong>IGN (9.7/10)</strong>
+    </div>
+    <p>
+      Игроки по всему миру называют HL2 лучшей игрой всех времён. Средний рейтинг на Metacritic — 96 баллов. Моды вроде Garry's Mod, синематики и бесчисленные фанатские теории поддерживают жизнь комьюнити спустя 20 лет.
+      «Гравипушка — лучшее оружие в истории видеоигр», — пишут в отзывах Steam, где игра имеет 98% положительных рецензий.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <footer>
+    <p>© 2024 · Фан-страница Half-Life 2. Все права принадлежат Valve Corporation.</p>
+    <p style="font-size: 0.8rem; margin-top: 0.3rem;">
+      «Правильное время, мистер Фримен? Оно истекает…» <span class="lambda-symbol">λ</span>
+    </p>
+    <div class="button-hint">RESISTANCE · APPROVED</div>
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // --- ДОЖДЬ: создаём капли динамически ---
+    const rainContainer = document.getElementById('rainContainer');
+    const DROP_COUNT = 90; // количество капель
+
+    function createRaindrop() {
+      const drop = document.createElement('div');
+      drop.className = 'raindrop';
+      
+      // Случайные параметры
+      const left = Math.random() * 100; // позиция по горизонтали (%)
+      const duration = 0.7 + Math.random() * 1.4; // скорость падения (секунды)
+      const delay = Math.random() * 5; // задержка перед стартом
+      const height = 10 + Math.random() * 25; // длина капли
+      const opacity = 0.2 + Math.random() * 0.4;
+      
+      drop.style.left = left + '%';
+      drop.style.height = height + 'px';
+      drop.style.animationDuration = duration + 's';
+      drop.style.animationDelay = delay + 's';
+      drop.style.opacity = opacity;
+      
+      return drop;
+    }
+
+    // Создаём все капли
+    for (let i = 0; i < DROP_COUNT; i++) {
+      rainContainer.appendChild(createRaindrop());
+    }
+
+    // Периодически обновляем капли, чтобы анимация не заканчивалась
+    setInterval(() => {
+      // Удаляем старые капли (которые уже "упали")
+      const drops = rainContainer.querySelectorAll('.raindrop');
+      if (drops.length > DROP_COUNT + 20) {
+        for (let i = 0; i < 10; i++) {
+          if (drops[i]) drops[i].remove();
+        }
+      }
+      // Добавляем новые
+      for (let i = 0; i < 5; i++) {
+        rainContainer.appendChild(createRaindrop());
+      }
+    }, 3000);
+
+    // --- Лёгкое изменение тени заголовка при движении мыши ---
+    const title = document.querySelector('h1');
+    if (title) {
+      document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 15;
+        const y = (e.clientY / window.innerHeight - 0.5) * 8;
+        title.style.textShadow = `${x}px ${y}px 15px #b85e0c, 2px 2px 0 #1a1a1a`;
+      });
+    }
+
+    // Консольное сообщение в стиле G-Man
+    console.log('Rise and shine, Mr. Freeman. Rise and... shine.');
+    console.log('Туман и дождь активированы. Добро пожаловать в Сити 17.');
+  })();
+</script>
+</body>
+</html>
